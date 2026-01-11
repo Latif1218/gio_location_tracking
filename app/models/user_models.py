@@ -24,6 +24,14 @@ class User(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     
     
+    locations = relationship(
+        "UserLocationHistory", 
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    
+    
 class PasswordResetCode(Base):
     __tablename__ = "password_reset_codes"
     
