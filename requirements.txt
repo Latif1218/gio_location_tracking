@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pyjwt
+passlib[bcrypt]
+python-dotenv
+twilio  
+pwdlib[argon2]
+fastapi[standard]
+psycopg2
+httpx
+cuid2
+python-jose
+email-validator
+alembic
+redis
