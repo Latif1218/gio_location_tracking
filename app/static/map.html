@@ -4,11 +4,15 @@
 <button id="loginBtn">Login</button>
 
 <h2>Location</h2>
-<button id="shareLocation">Share My Location</button>
+<button id="shareLocation">Start Location Tracking</button>
 
 <script>
-// 1️⃣ Login function
-document.getElementById("loginBtn").addEventListener("click", async function() {
+const UPDATE_INTERVAL = 5000; // 5 seconds
+let trackingStarted = false;
+let intervalId = null;
+
+// 🔹 Login
+document.getElementById("loginBtn").addEventListener("click", async function () {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -28,47 +32,60 @@ document.getElementById("loginBtn").addEventListener("click", async function() {
 
     const data = await resp.json();
     localStorage.setItem("access_token", data.access_token);
-    alert("Login success! You can now share your location.");
+    alert("Login success! Now start location tracking.");
 });
 
-// 2️⃣ Share location function
-document.getElementById("shareLocation").addEventListener("click", async function() {
+// 🔹 Share / Start tracking
+document.getElementById("shareLocation").addEventListener("click", function () {
+
+    if (trackingStarted) {
+        alert("Location tracking already running");
+        return;
+    }
+
+    trackingStarted = true;
+    shareLocation(); // first call immediately
+
+    intervalId = setInterval(shareLocation, UPDATE_INTERVAL);
+});
+
+// 🔹 Core function
+async function shareLocation() {
     const token = localStorage.getItem("access_token");
     if (!token) {
-        alert("You must login first");
+        alert("Login first!");
         return;
     }
 
     if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
+        alert("Geolocation not supported");
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(async function(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
+    navigator.geolocation.getCurrentPosition(async function (pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
 
-        const response = await fetch("http://127.0.0.1:8000/location/update", {
+        const resp = await fetch("http://127.0.0.1:8000/location/update", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ latitude: lat, longitude: lng })
+            body: JSON.stringify({
+                latitude: lat,
+                longitude: lng
+            })
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            console.log(data);
-            alert("Location shared successfully!");
-        } else {
-            const err = await response.text();
-            console.error(err);
-            alert("Failed to share location");
-        }
+        const data = await resp.json();
+        console.log("Location update:", data);
 
-    }, function(error) {
-        alert("Location access denied!");
+        if (data.is_present === 0) {
+            alert("❌ You are marked ABSENT (moved more than 5 meters)");
+        }
+    }, function () {
+        alert("Location permission denied");
     });
-});
+}
 </script>

@@ -1,4 +1,5 @@
 import jwt
+from jwt import ExpiredSignatureError, PyJWTError
 from fastapi import Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
@@ -15,7 +16,7 @@ SECRET_KEY = JWT_SECRET_KEY
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="token")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 5  
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  
 
 
 def get_user(db: Session, username: str):
@@ -58,8 +59,13 @@ def get_current_user(
         if user_id is None:
             raise credentials_exception
         token_data = user_schemas.TokenData(id=user_id)
-        
-    except IndentationError:
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    except PyJWTError:
         raise credentials_exception
     
     user = db.query(user_models.User).filter(user_models.User.id == token_data.id).first()
