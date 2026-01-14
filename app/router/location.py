@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..models.user_location_history import UserLocationHistory
 from ..schemas.location_schema import UserLocationCreate
@@ -85,6 +85,3 @@ def update_user_location(
     # db.refresh(new_location)
     
     # return {"status": "Location saved", "id": new_location.id}
-
-
-
