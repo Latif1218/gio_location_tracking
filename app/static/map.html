@@ -7,11 +7,10 @@
 <button id="shareLocation">Start Location Tracking</button>
 
 <script>
-const UPDATE_INTERVAL = 5000; // 5 seconds
+const UPDATE_INTERVAL = 5000; 
 let trackingStarted = false;
 let intervalId = null;
 
-// 🔹 Login
 document.getElementById("loginBtn").addEventListener("click", async function () {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
@@ -35,7 +34,6 @@ document.getElementById("loginBtn").addEventListener("click", async function () 
     alert("Login success! Now start location tracking.");
 });
 
-// 🔹 Share / Start tracking
 document.getElementById("shareLocation").addEventListener("click", function () {
 
     if (trackingStarted) {
@@ -44,12 +42,11 @@ document.getElementById("shareLocation").addEventListener("click", function () {
     }
 
     trackingStarted = true;
-    shareLocation(); // first call immediately
+    shareLocation(); 
 
     intervalId = setInterval(shareLocation, UPDATE_INTERVAL);
 });
 
-// 🔹 Core function
 async function shareLocation() {
     const token = localStorage.getItem("access_token");
     if (!token) {
@@ -82,7 +79,7 @@ async function shareLocation() {
         console.log("Location update:", data);
 
         if (data.is_present === 0) {
-            alert("❌ You are marked ABSENT (moved more than 5 meters)");
+            alert("You are marked ABSENT (moved more than 5 meters)");
         }
     }, function () {
         alert("Location permission denied");
