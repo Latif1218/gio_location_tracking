@@ -174,3 +174,26 @@ def update_password_without_token(
         )
         
         
+        
+        
+@router.put("/update_password")
+def update_password(
+    payload: user_schemas.PasswordUpdate,
+    current_user: user_models.User = Depends(user_auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(user_models.User).filter(
+        user_models.User.id == current_user.id
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    db.commit()
+    
+    return{
+        "status": "Success",
+        "message": "Password update successfully."
+    }
