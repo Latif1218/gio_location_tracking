@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from ..models.user_location_history import UserLocationHistory
 from ..schemas.location_schema import UserLocationCreate
@@ -16,7 +16,7 @@ router = APIRouter(
 MAX_DISTANCE = 5
 
 
-@router.post("/update")
+@router.post("/update", status_code=status.HTTP_200_OK)
 def update_user_location(
     location: UserLocationCreate,
     current_user: dict = Depends(get_current_user),

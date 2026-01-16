@@ -59,3 +59,48 @@ def forgot_password(
         "status": "seccess",
         "message": f"Password reset otp sent to {user.email}"
     }
+    
+    
+    
+@router.post("/verify_otp", status_code=status.HTTP_200_OK)
+def verify_otp(
+    payload: user_schemas.OTPVerify, 
+    db: Session = Depends(get_db)
+):
+    user = db.query(user_models.User).filter(
+        user_models.User.email == payload.email
+    ).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email dose not exist"
+        )
+        
+    otp_record = db.query(user_models.PasswordResetCode).filter(
+        user_models.PasswordResetCode.user_id == user.id,
+        user_models.PasswordResetCode.otp == payload.otp,
+        user_models.PasswordResetCode.used == False,
+        user_models.PasswordResetCode.expires_at > datetime.now(timezone.utc)
+    ).first()
+    
+    if not otp_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tnvalid or expired OTP"
+        )
+        
+    otp_record.used = True
+    db.commit()
+    
+    redis_session = get_redis()
+    reset_key = redis_session.get_key("password_reset: {}:{}", payload.email, payload.otp)
+    redis_session.set_with_expiry(reset_key, "verified", 600)
+    
+    return {
+        "status": "success", 
+        "message": "OTP verified successfully. you can now reset your password"
+    }
+    
+    
+    
+    
