@@ -19,16 +19,18 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_management = Column(Boolean, default=False)
     two_fa_enabled = Column(Boolean, default=False)
-    two_fa_method = Column(String)  # "email" or "sms"
+    two_fa_method = Column(String) 
     role = Column(String, default="user")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     
     
-    locations = relationship(
-        "UserLocationHistory", 
-        back_populates="user",
-        cascade="all, delete-orphan"
-    )
+    locations = relationship(  
+    "UserFixedLocation",
+    back_populates="user",
+    foreign_keys="[UserFixedLocation.user_id]",  
+    cascade="all, delete-orphan",
+    uselist=False 
+)
 
     
     

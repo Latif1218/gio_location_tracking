@@ -1,88 +1,374 @@
-<h2>Login</h2>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-<button id="loginBtn">Login</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Remote Job Attendance System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 20px;
+      background: linear-gradient(to bottom, #f0f4f8, #d9e2ec);
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+    h2 {
+      text-align: center;
+      color: #34495e;
+      margin: 20px 0 15px;
+    }
+    input, button {
+      display: block;
+      width: 100%;
+      margin: 12px 0;
+      padding: 14px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #bdc3c7;
+      box-sizing: border-box;
+      transition: all 0.3s;
+    }
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    }
+    button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #219653;
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    #logoutBtn {
+      background: #e74c3c;
+    }
+    #logoutBtn:hover {
+      background: #c0392b;
+    }
+    #requestChangeBtn {
+      background: #f39c12;
+    }
+    #requestChangeBtn:hover {
+      background: #e67e22;
+    }
+    #status {
+      margin-top: 25px;
+      padding: 18px;
+      border-radius: 10px;
+      background: white;
+      min-height: 90px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.5;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .success { background: #e8f5e9; color: #27ae60; border-left: 5px solid #27ae60; }
+    .danger  { background: #ffebee; color: #c0392b; border-left: 5px solid #c0392b; }
+    .info    { background: #e3f2fd; color: #2980b9; border-left: 5px solid #2980b9; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
 
-<h2>Location</h2>
-<button id="shareLocation">Start Location Tracking</button>
+  <h1>Remote Job Attendance System</h1>
 
-<script>
-const UPDATE_INTERVAL = 5000; 
-let trackingStarted = false;
-let intervalId = null;
+  <!-- Login Section -->
+  <div id="loginSection">
+    <h2>Login</h2>
+    <input type="email"    id="email"    placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="loginBtn">Login</button>
+  </div>
 
-document.getElementById("loginBtn").addEventListener("click", async function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+  <!-- Dashboard (hidden initially) -->
+  <div id="dashboard" class="hidden">
+    <h2>Welcome</h2>
+    
+    <button id="setOfficeBtn">Set Office Location (First Time Only)</button>
+    
+    <!-- Request Change button - initially hidden -->
+    <button id="requestChangeBtn" style="display: none;">Request to Change Office Location</button>
+    
+    <button id="markAttendanceBtn">Mark Today's Attendance</button>
+    <button id="logoutBtn">Logout</button>
 
-    const resp = await fetch("http://127.0.0.1:8000/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-            username: email,
-            password: password
-        })
-    });
+    <div id="status"></div>
+  </div>
 
-    if (!resp.ok) {
-        alert("Login failed");
-        return;
+  <script>
+    // =====================================
+    // CONFIGURATION
+    // =====================================
+    const API_BASE = "http://127.0.0.1:8000";
+
+    // =====================================
+    // DOM ELEMENTS
+    // =====================================
+    const loginSection     = document.getElementById("loginSection");
+    const dashboard        = document.getElementById("dashboard");
+    const statusDiv        = document.getElementById("status");
+    const setOfficeBtn     = document.getElementById("setOfficeBtn");
+    const requestChangeBtn = document.getElementById("requestChangeBtn");
+
+    let token = localStorage.getItem("access_token");
+
+    // =====================================
+    // INITIAL PAGE LOAD - Always show login form
+    // =====================================
+    showLogin();
+
+    // =====================================
+    // HELPER FUNCTIONS
+    // =====================================
+    function showLogin() {
+      loginSection.classList.remove("hidden");
+      dashboard.classList.add("hidden");
+      statusDiv.textContent = "";
     }
 
-    const data = await resp.json();
-    localStorage.setItem("access_token", data.access_token);
-    alert("Login success! Now start location tracking.");
-});
-
-document.getElementById("shareLocation").addEventListener("click", function () {
-
-    if (trackingStarted) {
-        alert("Location tracking already running");
-        return;
+    function showDashboard() {
+      loginSection.classList.add("hidden");
+      dashboard.classList.remove("hidden");
+      // Check lock status immediately after showing dashboard
+      checkLocationLockStatus();
     }
 
-    trackingStarted = true;
-    shareLocation(); 
-
-    intervalId = setInterval(shareLocation, UPDATE_INTERVAL);
-});
-
-async function shareLocation() {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-        alert("Login first!");
-        return;
+    function showStatus(message, type = "info") {
+      statusDiv.textContent = message;
+      statusDiv.className = type;
     }
 
-    if (!navigator.geolocation) {
-        alert("Geolocation not supported");
-        return;
-    }
+    // =====================================
+    // CHECK LOCATION LOCK STATUS FROM BACKEND
+    // =====================================
+    async function checkLocationLockStatus() {
+      if (!token) return;
 
-    navigator.geolocation.getCurrentPosition(async function (pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        const resp = await fetch("http://127.0.0.1:8000/location/update", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                latitude: lat,
-                longitude: lng
-            })
+      try {
+        const resp = await fetch(`${API_BASE}/location/status`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
         });
 
-        const data = await resp.json();
-        console.log("Location update:", data);
-
-        if (data.is_present === 0) {
-            alert("You are marked ABSENT (moved more than 5 meters)");
+        if (!resp.ok) {
+          throw new Error("Failed to check location status");
         }
-    }, function () {
-        alert("Location permission denied");
+
+        const data = await resp.json();
+
+        if (data.is_locked) {
+          // Locked → disable set button, show request button
+          setOfficeBtn.disabled = true;
+          setOfficeBtn.textContent = "Office Location Locked";
+          requestChangeBtn.style.display = "block";
+          showStatus("Office location is locked. To change it, send a request to authority.", "info");
+        } else {
+          // Not locked yet (first time) → enable set button
+          setOfficeBtn.disabled = false;
+          setOfficeBtn.textContent = "Set Office Location (First Time Only)";
+          requestChangeBtn.style.display = "none";
+          showStatus("Please set your office location for the first time.", "info");
+        }
+
+        if (data.change_request_pending) {
+          showStatus("Your previous location change request is pending approval.", "info");
+        }
+      } catch (err) {
+        showStatus("Error checking status: " + err.message, "danger");
+      }
+    }
+
+    // =====================================
+    // GET CURRENT LOCATION
+    // =====================================
+    async function getCurrentLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject("Geolocation is not supported by your browser.");
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
+          }),
+          err => reject("Location permission denied or error: " + err.message),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      });
+    }
+
+    // =====================================
+    // LOGIN HANDLER
+    // =====================================
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) {
+        showStatus("Please enter both email and password.", "danger");
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${API_BASE}/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            username: email,
+            password: password
+          })
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.detail || "Login failed");
+        }
+
+        const data = await resp.json();
+        localStorage.setItem("access_token", data.access_token);
+        token = data.access_token;
+
+        showDashboard(); // This will call checkLocationLockStatus()
+        showStatus(data.message || "Login successful! Please allow location access.", "success");
+      } catch (err) {
+        showStatus("Login error: " + err.message, "danger");
+      }
     });
-}
-</script>
+
+    // =====================================
+    // LOGOUT HANDLER
+    // =====================================
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("access_token");
+      token = null;
+      showLogin();
+      showStatus("Logged out successfully.", "info");
+    });
+
+    // =====================================
+    // SET OFFICE LOCATION (First time or unlocked)
+    // =====================================
+    document.getElementById("setOfficeBtn").addEventListener("click", async () => {
+      if (!token || setOfficeBtn.disabled) return showStatus("Action not allowed.", "danger");
+
+      try {
+        const loc = await getCurrentLocation();
+        const resp = await fetch(`${API_BASE}/location/set-fixed-location`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(loc)
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.detail || "Failed to set location");
+        }
+
+        const data = await resp.json();
+        showStatus(data.message || "Office location set successfully and now locked!", "success");
+
+        // After successful set, lock the button locally too
+        setOfficeBtn.disabled = true;
+        setOfficeBtn.textContent = "Office Location Locked";
+        requestChangeBtn.style.display = "block";
+      } catch (err) {
+        showStatus("Error: " + err.message, "danger");
+      }
+    });
+
+    // =====================================
+    // REQUEST LOCATION CHANGE
+    // =====================================
+    document.getElementById("requestChangeBtn").addEventListener("click", async () => {
+      if (!token) return showStatus("Please login first!", "danger");
+
+      try {
+        const loc = await getCurrentLocation();
+        const resp = await fetch(`${API_BASE}/location/request-location-change`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(loc)
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.detail || "Request failed");
+        }
+
+        const data = await resp.json();
+        showStatus(data.message || "Request sent to authority. Waiting for approval.", "info");
+
+        // Optional: disable button temporarily after request
+        requestChangeBtn.disabled = true;
+        setTimeout(() => { requestChangeBtn.disabled = false; }, 30000); // re-enable after 30s
+      } catch (err) {
+        showStatus("Error: " + err.message, "danger");
+      }
+    });
+
+    // =====================================
+    // MARK TODAY'S ATTENDANCE (unchanged)
+    // =====================================
+    document.getElementById("markAttendanceBtn").addEventListener("click", async () => {
+      if (!token) {
+        showStatus("Please login first!", "danger");
+        return;
+      }
+
+      try {
+        const loc = await getCurrentLocation();
+        const resp = await fetch(`${API_BASE}/location/mark-attendance`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(loc)
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.detail || "Failed to mark attendance");
+        }
+
+        const data = await resp.json();
+        const msg = data.is_present
+          ? `Present (Distance: ${data.distance.toFixed(2)} meters)`
+          : `Absent (Distance: ${data.distance.toFixed(2)} meters — more than 5m)`;
+
+        showStatus(msg + "\n" + (data.message || ""), data.is_present ? "success" : "danger");
+      } catch (err) {
+        showStatus("Error: " + err.message, "danger");
+      }
+    });
+  </script>
+</body>
+</html>
