@@ -76,13 +76,13 @@ cd gio_location_tracking
 ### 3️⃣ Install dependencies
 
 ```bash
-flutter pub get
+pip install -r requirement.txt
 ```
 
 ### 4️⃣ Run the application
 
 ```bash
-flutter run
+http://127.0.0.1:8000/static/map.html
 ```
 
 ---
