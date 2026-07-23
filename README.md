@@ -5,7 +5,7 @@ The project can be used as a foundation for building applications that require *
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 
